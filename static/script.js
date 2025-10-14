@@ -4,39 +4,75 @@ const sourcesEl = document.getElementById("source-list");
 const timestampEl = document.getElementById("timestamp");
 const refreshBtn = document.getElementById("refresh-button");
 
+const documentEl = document.documentElement;
+const API_ENDPOINT = documentEl?.dataset?.apiEndpoint || "/api/sentiment";
+const FALLBACK_ENDPOINT = documentEl?.dataset?.fallbackEndpoint || null;
+
 async function fetchSentiment() {
   headlineEl.textContent = "Refreshing sentiment...";
   refreshBtn.disabled = true;
 
   try {
-    const response = await fetch("/api/sentiment");
-    const payload = await response.json();
-
-    if (payload.status !== "ok") {
-      throw new Error(payload.message || "Unable to fetch sentiment");
-    }
-
-    updateUI(payload);
+    const { payload, usedFallback } = await requestWithFallback(API_ENDPOINT);
+    updateUI(payload, usedFallback);
   } catch (error) {
     console.error(error);
-    headlineEl.textContent = "Sentiment unavailable";
-    summaryEl.textContent =
-      "We could not reach the data sources right now. Please try again in a moment.";
-    sourcesEl.innerHTML = "";
-    timestampEl.textContent = "";
+    showError();
   } finally {
     refreshBtn.disabled = false;
   }
 }
 
-function updateUI(data) {
-  headlineEl.textContent = data.level;
-  summaryEl.textContent = data.summary;
+async function requestWithFallback(endpoint) {
+  try {
+    const payload = await requestSentiment(endpoint);
+    return { payload, usedFallback: false };
+  } catch (primaryError) {
+    if (!FALLBACK_ENDPOINT || endpoint === FALLBACK_ENDPOINT) {
+      throw primaryError;
+    }
+
+    console.warn("Falling back to bundled sentiment data", primaryError);
+
+    const payload = await requestSentiment(FALLBACK_ENDPOINT);
+    return { payload, usedFallback: true };
+  }
+}
+
+async function requestSentiment(endpoint) {
+  if (!endpoint) {
+    throw new Error("No endpoint configured for sentiment data");
+  }
+
+  const response = await fetch(endpoint);
+
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`);
+  }
+
+  const payload = await response.json();
+
+  if (payload.status && payload.status !== "ok") {
+    throw new Error(payload.message || "Unable to fetch sentiment");
+  }
+
+  return payload.status ? payload : { status: "ok", ...payload };
+}
+
+function updateUI(data, usedFallback = false) {
+  headlineEl.textContent = data.level || "Sentiment update";
+  summaryEl.textContent =
+    data.summary ||
+    (usedFallback
+      ? "Demo market sentiment is displayed because the live API is unavailable."
+      : "Market sentiment summary is unavailable right now.");
 
   const date = data.as_of ? new Date(data.as_of) : null;
-  timestampEl.textContent = date
-    ? `Last updated ${date.toLocaleString()}`
+  const timestamp = date ? `Last updated ${date.toLocaleString()}` : "";
+  const fallbackNotice = usedFallback
+    ? (timestamp ? " · " : "") + "Showing demo data (live API unavailable)."
     : "";
+  timestampEl.textContent = `${timestamp}${fallbackNotice}`;
 
   const cards = (data.sources || []).map((source) => {
     const container = document.createElement("article");
@@ -84,6 +120,14 @@ function updateUI(data) {
   });
 
   sourcesEl.replaceChildren(...cards);
+}
+
+function showError() {
+  headlineEl.textContent = "Sentiment unavailable";
+  summaryEl.textContent =
+    "We could not reach live market data right now. Showing no sentiment information.";
+  sourcesEl.innerHTML = "";
+  timestampEl.textContent = "";
 }
 
 refreshBtn.addEventListener("click", fetchSentiment);
