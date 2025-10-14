@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html
   lang="en"
-  data-api-endpoint="{{ url_for('sentiment_api') }}"
-  data-fallback-endpoint="{{ url_for('static', filename='sentiment-sample.json') }}"
+  data-api-endpoint="/api/sentiment"
+  data-fallback-endpoint="static/sentiment-sample.json"
 >
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Market Sentiment Pulse</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="stylesheet" href="static/styles.css" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
   </head>
@@ -36,6 +36,6 @@
       </footer>
     </main>
 
-    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+    <script src="static/script.js" defer></script>
   </body>
 </html>

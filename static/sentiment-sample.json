@@ -1,0 +1,42 @@
+{
+  "status": "ok",
+  "as_of": "2024-01-01T12:00:00Z",
+  "level": "Neutral",
+  "summary": "Demo data loaded because the live sentiment API is unavailable.",
+  "score": 0.1,
+  "sources": [
+    {
+      "source": "CNN Fear & Greed Index",
+      "label": "Neutral",
+      "score": 0.08,
+      "details": {
+        "raw_score": 51,
+        "url": "https://money.cnn.com/data/fear-and-greed/"
+      }
+    },
+    {
+      "source": "Alternative.me Fear & Greed",
+      "label": "Neutral",
+      "score": 0.12,
+      "details": {
+        "raw_score": "52",
+        "url": "https://alternative.me/crypto/fear-and-greed-index/"
+      }
+    },
+    {
+      "source": "Alpha Vantage News Sentiment",
+      "label": "Balanced",
+      "score": 0.09,
+      "details": {
+        "average_score": 0.02,
+        "url": "https://www.alphavantage.co/"
+      }
+    }
+  ],
+  "failures": [
+    {
+      "source": "api/sentiment",
+      "reason": "This static page is using bundled demo data."
+    }
+  ]
+}

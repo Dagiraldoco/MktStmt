@@ -23,6 +23,15 @@ in a clean, mobile-friendly interface.
 4. Open <http://127.0.0.1:5000> in a browser (desktop or mobile) to view the
    live sentiment summary.
 
+### Static hosting
+
+The repository now also includes a pre-built `index.html` at the project root.
+When served from a static host (for example GitHub Pages), the page will load a
+bundled demo sentiment snapshot from `static/sentiment-sample.json` if the live
+Flask API is not available. This allows visitors to experience the interface
+without deploying the backend, while still showing live data whenever the API
+is reachable.
+
 The backend retrieves live data from the following sources at request time:
 
 - CNN Fear & Greed Index summary
