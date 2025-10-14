@@ -5,8 +5,84 @@ const timestampEl = document.getElementById("timestamp");
 const refreshBtn = document.getElementById("refresh-button");
 
 const documentEl = document.documentElement;
-const API_ENDPOINT = documentEl?.dataset?.apiEndpoint || "/api/sentiment";
-const FALLBACK_ENDPOINT = documentEl?.dataset?.fallbackEndpoint || null;
+const DEFAULT_API_ENDPOINT = documentEl?.dataset?.apiEndpoint || "/api/sentiment";
+const DEFAULT_FALLBACK_ENDPOINT = documentEl?.dataset?.fallbackEndpoint || null;
+const STORAGE_KEY = "mktstmt:endpoints";
+
+function loadStoredConfig() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      return {};
+    }
+
+    const parsed = JSON.parse(raw);
+    if (typeof parsed !== "object" || parsed === null) {
+      return {};
+    }
+
+    return {
+      api: typeof parsed.api === "string" ? parsed.api : undefined,
+      fallback:
+        typeof parsed.fallback === "string" ? parsed.fallback : undefined,
+    };
+  } catch (error) {
+    console.warn("Unable to read stored API configuration", error);
+    return {};
+  }
+}
+
+function persistConfig(config) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+  } catch (error) {
+    console.warn("Unable to persist API configuration", error);
+  }
+}
+
+function resolveConfig() {
+  const params = new URLSearchParams(window.location.search);
+  const stored = loadStoredConfig();
+  const config = { ...stored };
+  let urlMutated = false;
+
+  if (params.has("resetConfig")) {
+    config.api = undefined;
+    config.fallback = undefined;
+    persistConfig(config);
+    params.delete("resetConfig");
+    urlMutated = true;
+  }
+
+  if (params.has("api")) {
+    const api = params.get("api")?.trim();
+    config.api = api || undefined;
+    params.delete("api");
+    urlMutated = true;
+  }
+
+  if (params.has("fallback")) {
+    const fallback = params.get("fallback")?.trim();
+    config.fallback = fallback || undefined;
+    params.delete("fallback");
+    urlMutated = true;
+  }
+
+  if (urlMutated) {
+    persistConfig(config);
+
+    const nextUrl = new URL(window.location.href);
+    nextUrl.search = params.toString();
+    window.history.replaceState({}, document.title, nextUrl.toString());
+  }
+
+  return {
+    api: config.api || DEFAULT_API_ENDPOINT,
+    fallback: config.fallback || DEFAULT_FALLBACK_ENDPOINT,
+  };
+}
+
+const { api: API_ENDPOINT, fallback: FALLBACK_ENDPOINT } = resolveConfig();
 
 async function fetchSentiment() {
   headlineEl.textContent = "Refreshing sentiment...";
