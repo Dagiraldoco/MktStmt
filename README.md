@@ -32,6 +32,27 @@ Flask API is not available. This allows visitors to experience the interface
 without deploying the backend, while still showing live data whenever the API
 is reachable.
 
+#### Using the live API from a static host
+
+Static hosts such as GitHub Pages cannot run the Flask backend. To surface live
+sentiment data you need to deploy `app.py` to a serverless provider (Render,
+Railway, Fly.io, etc.) and then point the static UI at that URL. The frontend
+now supports runtime configuration without editing the source code:
+
+1. Deploy the Flask app and note the public URL of the `/api/sentiment`
+   endpoint (for example `https://your-service.onrender.com/api/sentiment`).
+2. Visit your static site and append the query parameter
+   `?api=https://your-service.onrender.com/api/sentiment` to the URL.
+3. The page stores the value in `localStorage`, removes the query parameters,
+   and uses the live API on subsequent visits.
+4. Optional: add `&fallback=https://.../static/sentiment-sample.json` to point
+   to an alternate demo file, or append `?resetConfig=1` to clear the stored
+   configuration.
+
+These steps keep GitHub Pages serving the static assets while deferring API
+requests to your hosted backend, eliminating the "Demo data loaded" message
+whenever the live service is reachable.
+
 The backend retrieves live data from the following sources at request time:
 
 - CNN Fear & Greed Index summary
