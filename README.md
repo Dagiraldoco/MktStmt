@@ -1,71 +1,43 @@
-# Market Sentiment Pulse
+# Market Sentiment Composite
 
-A lightweight Flask application that surfaces a single, readable statement of
-current stock market sentiment. The backend aggregates data from three public
-sources and summarises the overall mood, while the frontend presents the status
-in a clean, mobile-friendly interface.
+A production-ready Next.js 14 + TypeScript dashboard that aggregates stock-market sentiment from multiple upstream sources. The backend fetches Alternative.me’s Fear & Greed index, Alpha Vantage news sentiment, and the CBOE VIX to produce a weighted 0–100 composite that is cached for five minutes. The frontend exposes a transparent, responsive interface suitable for Vercel deployment.
 
 ## Getting started
 
-1. Create and activate a Python 3.11 virtual environment.
-2. Install the dependencies:
+```bash
+npm install
+cp .env.example .env.local
+# populate ALPHAVANTAGE_API_KEY before running dev server
+npm run dev
+```
 
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Required environment variables
 
-3. Start the development server:
+| Name | Description |
+| --- | --- |
+| `ALPHAVANTAGE_API_KEY` | Server-side key for Alpha Vantage News Sentiment. Required for that source. |
+| `ENABLED_SOURCES` | Comma-separated list of source IDs (`altfg`, `alphavantage`, `vix`). Optional. |
+| `DEFAULT_WEIGHTS_JSON` | JSON mapping of source weights. Defaults to `{ "altfg": 0.35, "alphavantage": 0.35, "vix": 0.3 }`. |
 
-   ```bash
-   flask --app app run --debug
-   ```
+Keys are never exposed client-side. The API route reads from `process.env` and runs on a Node.js serverless function when deployed to Vercel.
 
-4. Open <http://127.0.0.1:5000> in a browser (desktop or mobile) to view the
-   live sentiment summary.
+## Running tests and lint
 
-### Static hosting
+```bash
+npm run lint
+npm run test
+```
 
-The repository now also includes a pre-built `index.html` at the project root.
-When served from a static host (for example GitHub Pages), the page will load a
-bundled demo sentiment snapshot from `static/sentiment-sample.json` if the live
-Flask API is not available. This allows visitors to experience the interface
-without deploying the backend, while still showing live data whenever the API
-is reachable.
+Vitest covers normalization helpers, ensuring the VIX curve and weight renormalization logic behave as expected.
 
-#### Using the live API from a static host
+## Deployment notes
 
-Static hosts such as GitHub Pages cannot run the Flask backend. To surface live
-sentiment data you need to deploy `app.py` to a serverless provider (Render,
-Railway, Fly.io, etc.) and then point the static UI at that URL. The frontend
-now supports runtime configuration without editing the source code:
+- **Framework**: Next.js 14 App Router, TypeScript, CSS modules-free styling via `globals.css`.
+- **API route**: `/api/sentiment` is a Node.js Serverless Function on Vercel. Responses are cached in-memory for 300s and emit `Cache-Control: s-maxage=300, stale-while-revalidate=60` headers for Vercel’s CDN.
+- **Resilience**: Each source adapter respects per-source timeouts with a retry, never throws, and reports partial failures. If all sources fail, a bundled demo payload is returned so the UI continues functioning.
+- **Configuration**: Override source weights in development via `?weights=` query string or adjust cache TTL with `?maxAge=`. Overrides are ignored in production builds.
+- **History**: The frontend maintains a 20-point localStorage sparkline for the composite score while the browser session is warm.
 
-1. Deploy the Flask app and note the public URL of the `/api/sentiment`
-   endpoint (for example `https://your-service.onrender.com/api/sentiment`).
-2. Visit your static site and append the query parameter
-   `?api=https://your-service.onrender.com/api/sentiment` to the URL.
-3. The page stores the value in `localStorage`, removes the query parameters,
-   and uses the live API on subsequent visits.
-4. Optional: add `&fallback=https://.../static/sentiment-sample.json` to point
-   to an alternate demo file, or append `?resetConfig=1` to clear the stored
-   configuration.
+## Data-source considerations
 
-These steps keep GitHub Pages serving the static assets while deferring API
-requests to your hosted backend, eliminating the "Demo data loaded" message
-whenever the live service is reachable.
-
-The backend retrieves live data from the following sources at request time:
-
-- CNN Fear & Greed Index summary
-- Alternative.me Fear & Greed Index
-- Alpha Vantage News Sentiment API (using the public `demo` key)
-
-Each source is resilient to parsing failures. When one or more sources cannot
-be reached, the interface will show the information gathered from the
-remaining sources and note any connection errors.
-
-## Notes
-
-- Network access is required for the application to reach the sentiment data
-  providers. If running inside a restricted environment, the refresh action
-  may show an error message until connectivity is restored.
-- The UI is responsive and optimised for modern mobile and desktop browsers.
+Respect the terms of service and rate limits for each provider. Prefer official APIs (Alternative.me, Alpha Vantage, Stooq for VIX close). Scraped endpoints can change without notice, so monitor adapters and update as needed.
